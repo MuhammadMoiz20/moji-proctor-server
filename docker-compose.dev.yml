@@ -1,0 +1,15 @@
+# Docker Compose for Development with Hot Reload
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.9'
+
+services:
+  server:
+    volumes:
+      - ./src:/app/src:ro
+      - ./prisma:/app/prisma:ro
+    command: npm run dev
+    environment:
+      - NODE_ENV=development

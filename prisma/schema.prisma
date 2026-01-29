@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  githubId      String         @unique
+  githubLogin   String
+  githubName    String?
+  githubEmail   String?
+  role          String         @default("student")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  devices       Device[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Device {
+  id                String             @id @default(cuid())
+  userId            String
+  publicKey         String             @unique
+  createdAt         DateTime           @default(now())
+  lastSeenAt        DateTime           @default(now())
+  deviceCheckpoints DeviceCheckpoint[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signals           Signal[]
+  tamperFlags       TamperFlag[]
+
+  @@index([userId])
+  @@index([publicKey])
+  @@map("devices")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([revokedAt])
+  @@map("refresh_tokens")
+}
+
+model Signal {
+  id           String   @id @default(cuid())
+  eventId      String
+  deviceId     String
+  assignmentId String
+  courseId     String?
+  sessionId    String
+  type         String
+  timestamp    DateTime
+  payload      Json
+  seq          Int
+  signature    String
+  devicePubKey String
+  createdAt    DateTime @default(now())
+  device       Device   @relation(fields: [deviceId], references: [id])
+
+  @@unique([eventId, assignmentId])
+  @@index([deviceId])
+  @@index([assignmentId])
+  @@index([assignmentId, courseId])
+  @@index([assignmentId, createdAt])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("signals")
+}
+
+model DeviceSequence {
+  id           String   @id @default(cuid())
+  deviceId     String
+  assignmentId String
+  lastSeq      Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([deviceId, assignmentId])
+  @@index([deviceId])
+  @@map("device_sequences")
+}
+
+model DeviceCheckpoint {
+  id                  String   @id @default(cuid())
+  deviceId            String
+  assignmentId        String
+  lastCheckpointId    String?
+  stateHash           String   @default("")
+  seq                 Int      @default(0)
+  sessionCount        Int      @default(0)
+  totalFocusedSeconds Int      @default(0)
+  hasDiscontinuity    Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  device              Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, assignmentId])
+  @@index([deviceId])
+  @@index([assignmentId])
+  @@map("device_checkpoints")
+}
+
+model TamperFlag {
+  id                   String   @id @default(cuid())
+  deviceId             String
+  assignmentId         String
+  type                 String
+  description          String
+  detectedAtSeq        Int
+  signalId             String?
+  previousCheckpointId String?
+  newCheckpointId      String?
+  reviewed             Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  device               Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([assignmentId])
+  @@index([reviewed])
+  @@map("tamper_flags")
+}
