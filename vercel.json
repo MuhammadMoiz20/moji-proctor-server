@@ -1,17 +1,15 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "framework": null,
-  "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "api/handler.ts",
-      "use": "@vercel/node"
+  "functions": {
+    "api/handler.ts": {
+      "runtime": "nodejs20.x"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/api/handler"
+      "source": "/(.*)",
+      "destination": "/api/handler"
     }
   ]
 }
