@@ -5,7 +5,6 @@
 
 import 'dotenv/config';
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createServer } from '../src/index.js';
 import type { FastifyInstance } from 'fastify';
 
 // Vercel extends IncomingMessage with parsed body
@@ -14,12 +13,23 @@ interface VercelRequest extends IncomingMessage {
 }
 
 let serverInstance: FastifyInstance | null = null;
+let initError: Error | null = null;
 
 async function initialize(): Promise<FastifyInstance> {
+  if (initError) {
+    throw initError;
+  }
   if (!serverInstance) {
-    serverInstance = await createServer();
-    // Wait for Fastify to be ready (plugins loaded, routes registered)
-    await serverInstance.ready();
+    try {
+      // Dynamic import to catch module-level errors
+      const { createServer } = await import('../src/index.js');
+      serverInstance = await createServer();
+      // Wait for Fastify to be ready (plugins loaded, routes registered)
+      await serverInstance.ready();
+    } catch (err) {
+      initError = err instanceof Error ? err : new Error(String(err));
+      throw initError;
+    }
   }
   return serverInstance;
 }
@@ -69,7 +79,8 @@ export default async (req: VercelRequest, res: ServerResponse) => {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ 
         error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV !== 'production' ? (error instanceof Error ? error.stack : undefined) : undefined
       }));
     }
   }
