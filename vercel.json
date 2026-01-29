@@ -1,10 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npx prisma generate",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api/handler"
+      "src": "api/handler.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/handler"
     }
   ]
 }
