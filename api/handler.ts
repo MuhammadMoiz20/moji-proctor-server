@@ -22,7 +22,7 @@ async function initialize(): Promise<FastifyInstance> {
   if (!serverInstance) {
     try {
       // Dynamic import to catch module-level errors
-      const { createServer } = await import('../src/index.js');
+      const { createServer } = await import('../src/index');
       serverInstance = await createServer();
       // Wait for Fastify to be ready (plugins loaded, routes registered)
       await serverInstance.ready();
