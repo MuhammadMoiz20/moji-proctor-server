@@ -5,7 +5,7 @@
 
 import 'dotenv/config';
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createServer } from '../src/index';
+import { createServer } from '../src/index.js';
 import type { FastifyInstance } from 'fastify';
 
 // Vercel extends IncomingMessage with parsed body
