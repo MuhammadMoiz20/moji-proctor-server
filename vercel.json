@@ -4,14 +4,14 @@
   "installCommand": "npm install",
   "builds": [
     {
-      "src": "dist/index.js",
+      "src": "api/handler.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/index.js"
+      "dest": "/api/handler"
     }
   ]
 }
