@@ -7,6 +7,7 @@
 
 import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 
 /**
  * Canonical JSON stringify (must match client implementation)
@@ -142,6 +143,3 @@ export async function incrementSequenceNumber(
     },
   });
 }
-
-// Prisma client for signature service
-const prisma = new PrismaClient();

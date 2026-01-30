@@ -3,14 +3,8 @@
  * Wraps the Fastify server for Vercel's serverless environment
  */
 
-import 'dotenv/config';
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { FastifyInstance } from 'fastify';
-
-// Vercel extends IncomingMessage with parsed body
-interface VercelRequest extends IncomingMessage {
-  body?: any;
-}
 
 let serverInstance: FastifyInstance | null = null;
 let initError: Error | null = null;
@@ -21,20 +15,33 @@ async function initialize(): Promise<FastifyInstance> {
   }
   if (!serverInstance) {
     try {
+      console.log('Starting server initialization...');
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+      console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+      console.log('GITHUB_CLIENT_ID exists:', !!process.env.GITHUB_CLIENT_ID);
+      
       // Dynamic import to catch module-level errors
       const { createServer } = await import('../src/index');
+      console.log('createServer imported successfully');
+      
       serverInstance = await createServer();
+      console.log('Server instance created');
+      
       // Wait for Fastify to be ready (plugins loaded, routes registered)
       await serverInstance.ready();
+      console.log('Server ready');
     } catch (err) {
       initError = err instanceof Error ? err : new Error(String(err));
+      console.error('Server initialization error:', initError.message);
+      console.error('Stack:', initError.stack);
       throw initError;
     }
   }
   return serverInstance;
 }
 
-export default async (req: VercelRequest, res: ServerResponse) => {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const server = await initialize();
     
@@ -68,20 +75,17 @@ export default async (req: VercelRequest, res: ServerResponse) => {
     }
     
     // Send the response
-    res.statusCode = response.statusCode;
-    res.end(response.payload);
+    res.status(response.statusCode).send(response.payload);
   } catch (error) {
     console.error('Request handler error:', error);
     
     // If response hasn't been sent yet, send error
     if (!res.headersSent) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ 
+      res.status(500).json({ 
         error: 'Internal Server Error',
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: process.env.NODE_ENV !== 'production' ? (error instanceof Error ? error.stack : undefined) : undefined
-      }));
+      });
     }
   }
-};
+}

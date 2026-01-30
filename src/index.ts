@@ -12,23 +12,31 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
-import { PrismaClient } from '@prisma/client';
+import { disconnectPrisma } from './prisma';
 import { authRoutes } from './routes/auth';
 import { eventRoutes } from './routes/events';
 import { instructorRoutes } from './routes/instructor';
 import { healthRoutes } from './routes/health';
 
-export const prisma = new PrismaClient();
+export { prisma } from './prisma';
 
 /**
  * Validate required environment variables
  */
 function validateEnv(): void {
-  const required = ['DATABASE_URL', 'JWT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+  const required = ['DATABASE_URL', 'JWT_SECRET'];
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  const optional = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+  const missingOptional = optional.filter(key => !process.env[key]);
+  if (missingOptional.length > 0) {
+    console.warn(
+      `Missing optional environment variables (auth endpoints will fail): ${missingOptional.join(', ')}`
+    );
   }
 
   // Warn if JWT_SECRET is default-like
@@ -41,7 +49,7 @@ function validateEnv(): void {
   const corsOrigin = process.env.CORS_ORIGIN;
   const nodeEnv = process.env.NODE_ENV;
   if (nodeEnv === 'production' && (!corsOrigin || corsOrigin === '*')) {
-    throw new Error('CORS_ORIGIN must be explicitly set in production (no wildcard allowed)');
+    console.warn('CORS_ORIGIN is not explicitly set for production; CORS will be disabled.');
   }
 }
 
@@ -154,7 +162,7 @@ export async function createServer(): Promise<FastifyInstance> {
   const gracefulShutdown = async () => {
     server.log.info('Shutting down gracefully...');
     await server.close();
-    await prisma.$disconnect();
+    await disconnectPrisma();
     process.exit(0);
   };
 
